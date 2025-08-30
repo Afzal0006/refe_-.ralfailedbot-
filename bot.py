@@ -35,7 +35,7 @@ def get_referral_link(user_id):
 def main_menu_keyboard(user_id):
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard.add(
-        types.InlineKeyboardButton(text="Invite & Earn 2️⃣ Points", callback_data="invite"),
+        types.InlineKeyboardButton(text="🔗 Invite & Earn Points", callback_data="invite"),
         types.InlineKeyboardButton(text="My Points 💰", callback_data="my_points")
     )
     keyboard.add(
@@ -205,7 +205,7 @@ def handle_callbacks(call):
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption="🛠️ Contact Support: @golgibody",
+            caption="If you are facing any kind of problem please dm to @golgibody",
             reply_markup=keyboard
         )
 
