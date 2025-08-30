@@ -4,7 +4,7 @@ from pymongo import MongoClient
 # ==================== CONFIG ====================
 BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority"
-BOT_USERNAME = "Eeuei8w9w9wbbot"  # <-- yahan apne bot ka @username daalna hai (without @)
+BOT_USERNAME = "Eeuei8w9w9wbbot"  # <-- apne bot ka @username (without @)
 
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
@@ -161,14 +161,6 @@ def handle_callbacks(call):
         referral_link = get_referral_link(user_id)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
 
-        # Referral Link button
-        keyboard.add(
-            types.InlineKeyboardButton(
-                text="📢 My Referral Link",
-                url=referral_link
-            )
-        )
-
         # Back button
         keyboard.add(
             types.InlineKeyboardButton(
@@ -180,7 +172,8 @@ def handle_callbacks(call):
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption="📢 Invite & Earn 2️⃣ Points\nShare your unique link below 👇",
+            caption=f"📢 Your Referral Link:\n\n`{referral_link}`\n\n(Tap to copy 👆)",
+            parse_mode="Markdown",
             reply_markup=keyboard
         )
 
