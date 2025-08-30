@@ -183,7 +183,6 @@ def handle_callbacks(call):
         if points < 10:
             bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
             return
-
         msg = bot.send_message(call.message.chat.id,
             f"💵 You have {points} points.\nSend the amount you want to withdraw (min 10 points):")
         bot.register_next_step_handler(msg, process_withdraw)
@@ -236,4 +235,90 @@ def handle_callbacks(call):
         keyboard.add(
             types.InlineKeyboardButton(text="➕ Add Points", callback_data="admin_add_points"),
             types.InlineKeyboardButton(text="➖ Remove Points", callback_data="admin_remove_points"),
-            types.InlineKeyboardButton(text="👁‍🗨 Check User Points", callback_data="
+            types.InlineKeyboardButton(text="👁‍🗨 Check User Points", callback_data="admin_check_points"),
+            types.InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="back_to_main")
+        )
+
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption="⚙️ Admin Panel - Choose an action:",
+            reply_markup=keyboard
+        )
+
+    elif call.data.startswith("admin_"):
+        if call.from_user.id != OWNER_ID:
+            bot.answer_callback_query(call.id, "❌ You are not authorized.")
+            return
+
+        if call.data == "admin_add_points":
+            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to ADD")
+            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "add"))
+
+        elif call.data == "admin_remove_points":
+            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to REMOVE")
+            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "remove"))
+
+        elif call.data == "admin_check_points":
+            msg = bot.send_message(call.message.chat.id, "Send <user_id> to check points")
+            bot.register_next_step_handler(msg, process_admin_check_points)
+
+# ===== Withdraw Step Handler =====
+def process_withdraw(message):
+    user_id = message.from_user.id
+    user_data = users_collection.find_one({"user_id": user_id}) or {"points":0}
+    total_points = user_data.get("points",0)
+
+    try:
+        withdraw_amount = int(message.text)
+        if withdraw_amount < 10:
+            bot.reply_to(message, "❌ Minimum 10 points required to withdraw.")
+            return
+        if withdraw_amount > total_points:
+            bot.reply_to(message, f"❌ You only have {total_points} points. Enter a valid amount.")
+            return
+
+        users_collection.update_one({"user_id": user_id}, {"$inc": {"points": -withdraw_amount}})
+        withdraw_collection.insert_one({
+            "user_id": user_id,
+            "points": withdraw_amount,
+            "date": datetime.utcnow()
+        })
+
+        bot.reply_to(message, f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\nRemaining points: {total_points - withdraw_amount}")
+
+    except:
+        bot.reply_to(message, "❌ Invalid input! Send numeric amount only.")
+
+# ===== Admin Step Handlers =====
+def process_admin_points(message, action):
+    try:
+        user_id, points = map(int, message.text.split())
+        if action == "add":
+            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": points}})
+            if result.matched_count:
+                bot.reply_to(message, f"✅ Added {points} points to user {user_id}")
+            else:
+                bot.reply_to(message, "❌ User not found")
+        elif action == "remove":
+            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": -points}})
+            if result.matched_count:
+                bot.reply_to(message, f"✅ Removed {points} points from user {user_id}")
+            else:
+                bot.reply_to(message, "❌ User not found")
+    except:
+        bot.reply_to(message, "❌ Format error! Use <user_id> <points>")
+
+def process_admin_check_points(message):
+    try:
+        user_id = int(message.text)
+        user_data = users_collection.find_one({"user_id": user_id})
+        if user_data:
+            bot.reply_to(message, f"💰 User {user_id} has {user_data.get('points',0)} points")
+        else:
+            bot.reply_to(message, "❌ User not found")
+    except:
+        bot.reply_to(message, "❌ Format error! Send <user_id>")
+
+# ==================== POLLING ====================
+bot.polling()
