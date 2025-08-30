@@ -1,81 +1,53 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-from pymongo import MongoClient
-import logging
+from telebot import TeleBot, types
 
 # ===== Config =====
 BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
-MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
-# Channels
-CHANNELS = [
-    ("Store", "https://t.me/testing7889gy"),
-    ("Point", "https://t.me/SexyEmoji"),
-    ("Loda", "https://t.me/guiii8889")
-]
+# 3 Channels
+CHANNELS = ["@testing7889gy", "@testing7889gy", "@testing7889gy"]
 
-# ===== MongoDB =====
-client = MongoClient(MONGO_URI)
-db = client["startbot"]
-users = db["users"]
+bot = TeleBot(BOT_TOKEN)
 
-# ===== Logging =====
-logging.basicConfig(level=logging.INFO)
-
-# ===== /start =====
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    name = user.first_name
-
-    # Save user in DB
-    users.update_one(
-        {"user_id": user.id},
-        {"$set": {"user_id": user.id, "name": name}},
-        upsert=True
+# /start command
+@bot.message_handler(commands=['start'])
+def start(message):
+    keyboard = types.InlineKeyboardMarkup(row_width=2)  # row_width=2 for better layout
+    
+    # 3 Channel buttons
+    buttons = [types.InlineKeyboardButton(text=f"Join {ch[1:]}", url=f"https://t.me/{ch[1:]}") for ch in CHANNELS]
+    
+    # Check Joined button
+    check_button = types.InlineKeyboardButton(text="Check Joined ✅", callback_data="check_join")
+    
+    # Add buttons to keyboard
+    for btn in buttons:
+        keyboard.add(btn)
+    keyboard.add(check_button)
+    
+    bot.send_message(
+        message.chat.id,
+        "I'm referral bot\nPlease join all channels below:",
+        reply_markup=keyboard
     )
 
-    keyboard = [[InlineKeyboardButton(text, url=url)] for text, url in CHANNELS]
-    keyboard.append([InlineKeyboardButton("✅ Joined", callback_data="check")])
-
-    await update.message.reply_photo(
-        photo="https://i.ibb.co/FbVHf8JG/x.jpg",
-        caption=f"Hlo {name}\nJoin channel for free",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-# ===== Check Button =====
-async def check_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    user_id = query.from_user.id
-    ok = True
-
-    for _, url in CHANNELS:
-        chat_id = url.split("/")[-1]  # channel username extract
+# Callback for Check Joined
+@bot.callback_query_handler(func=lambda call: call.data == "check_join")
+def check_join(call):
+    joined_all = True
+    for ch in CHANNELS:
         try:
-            member = await context.bot.get_chat_member(chat_id, user_id)
-            if member.status in ["left", "kicked"]:
-                ok = False
+            member = bot.get_chat_member(ch, call.from_user.id)
+            if member.status not in ['member', 'administrator', 'creator']:
+                joined_all = False
+                break
         except:
-            ok = False
-
-    if ok:
-        # update user status in DB
-        users.update_one({"user_id": user_id}, {"$set": {"joined": True}})
-
-        # Purana msg delete
-        await query.message.delete()
-        await query.message.reply_text("Hlo sir how r u")
+            joined_all = False
+            break
+    
+    if joined_all:
+        bot.answer_callback_query(call.id, "✅ You joined all channels!")
     else:
-        await query.message.reply_text("⚠️ Please join all channels first!")
+        bot.answer_callback_query(call.id, "❌ You haven't joined all channels.")
 
-# ===== Main =====
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(check_join, pattern="check"))
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+# Run bot
+bot.polling()
