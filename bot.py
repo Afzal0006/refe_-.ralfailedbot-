@@ -1,5 +1,6 @@
 from telebot import TeleBot, types
 from pymongo import MongoClient
+import random
 
 BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority"
@@ -24,6 +25,10 @@ client = MongoClient(MONGO_URI)
 db = client["referral_bot"]
 users_collection = db["users"]
 
+# ===== Helper: generate referral link =====
+def get_referral_link(user_id):
+    return f"https://t.me/YourBotUsername?start={user_id}"
+
 @bot.message_handler(commands=['start'])
 def start(message):
     user_name = message.from_user.first_name or "User"
@@ -31,7 +36,7 @@ def start(message):
     # Save user in DB
     users_collection.update_one(
         {"user_id": message.from_user.id},
-        {"$set": {"name": user_name, "joined": False}},
+        {"$set": {"name": user_name, "joined": False, "points": 0}},
         upsert=True
     )
 
@@ -49,7 +54,7 @@ def start(message):
     sent_msg = bot.send_photo(
         message.chat.id,
         photo=START_PIC,
-        caption=f"HELLO, {user_name}\nYou must need to join our channel for free account!!!",
+        caption=f"HELLO, {user_name}\nYou must join our channels for free access!",
         reply_markup=keyboard
     )
 
@@ -91,15 +96,73 @@ def check_join(call):
             except:
                 pass
 
-        # Send Welcome message with image
+        # ===== Create Main Menu Buttons =====
+        main_menu = types.InlineKeyboardMarkup(row_width=2)
+
+        invite_btn = types.InlineKeyboardButton(
+            text="Invite & Earn 2️⃣ Points", 
+            url=get_referral_link(user_id)
+        )
+        points_btn = types.InlineKeyboardButton(
+            text="My Points 💰", 
+            callback_data="my_points"
+        )
+        withdraw_btn = types.InlineKeyboardButton(
+            text="Withdraw 💵", 
+            callback_data="withdraw"
+        )
+        support_btn = types.InlineKeyboardButton(
+            text="Support 🛠️", 
+            url="https://t.me/golgibody"
+        )
+        howto_btn = types.InlineKeyboardButton(
+            text="How To Use ❓", 
+            callback_data="how_to_use"
+        )
+
+        main_menu.add(invite_btn, points_btn)
+        main_menu.add(withdraw_btn)
+        main_menu.add(support_btn)
+        main_menu.add(howto_btn)
+
+        # Send Welcome message with buttons
         bot.send_photo(
             call.message.chat.id,
             photo=WELCOME_PIC,
-            caption=f"WELCOME, {user_name}\n~YoU ARE ON MAIN MENU\n~UsE BELOW BUTTONS To NAVIGATE"
+            caption=f"WELCOME, {user_name}\n~You are on Main Menu\n~Use the buttons below to navigate",
+            reply_markup=main_menu
         )
 
         bot.answer_callback_query(call.id, "✅ You joined all channels!")
+
     else:
         bot.answer_callback_query(call.id, "❌ You haven't joined all channels.")
+
+# ===== Callback for points, withdraw, how-to =====
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callbacks(call):
+    user_id = call.from_user.id
+    user_data = users_collection.find_one({"user_id": user_id}) or {"points":0}
+
+    if call.data == "my_points":
+        bot.answer_callback_query(call.id, f"💰 You have {user_data.get('points',0)} points.")
+    elif call.data == "withdraw":
+        if user_data.get("points",0) >= 10:
+            bot.answer_callback_query(call.id, "💵 Withdraw request sent!")
+            # Reset points after withdraw
+            users_collection.update_one({"user_id": user_id}, {"$set":{"points":0}})
+        else:
+            bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
+    elif call.data == "how_to_use":
+        instructions = (
+            "📌 How to Use Bot:\n"
+            "1. Join all required channels.\n"
+            "2. Click 'Invite & Earn Points' to get your referral link.\n"
+            "3. Earn 2 points per referral.\n"
+            "4. Click 'My Points' to see your points.\n"
+            "5. Click 'Withdraw' to redeem points (min 10 points).\n"
+            "6. For support, click 'Support' button."
+        )
+        bot.answer_callback_query(call.id, instructions, show_alert=True)
 
 bot.polling()
