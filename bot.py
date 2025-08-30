@@ -169,12 +169,7 @@ def handle_callbacks(call):
         keyboard = types.InlineKeyboardMarkup(row_width=1)
 
         # Back button
-        keyboard.add(
-            types.InlineKeyboardButton(
-                text="🔙 Back",
-                callback_data="back_to_main"
-            )
-        )
+        keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
 
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
@@ -214,7 +209,7 @@ def handle_callbacks(call):
 
     elif call.data == "how_to_use":
         instructions = (
-            "📌 How to Use Bot:\n"
+            "📌 How to Use Bot:\n\n"
             "1. Join all required channels.\n"
             "2. Click 'Invite & Earn Points' to get your referral link.\n"
             "3. Earn 2 points per referral.\n"
@@ -222,7 +217,16 @@ def handle_callbacks(call):
             "5. Click 'Withdraw' to redeem points (min 10 points).\n"
             "6. For support, click 'Support' button."
         )
-        bot.answer_callback_query(call.id, instructions, show_alert=True)
+
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
+
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption=instructions,
+            reply_markup=keyboard
+        )
 
     elif call.data == "back_to_main":
         user_name = call.from_user.first_name or "User"
