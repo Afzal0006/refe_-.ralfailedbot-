@@ -16,8 +16,8 @@ BUTTON_NAMES = [
     "🎯 Join Fun Channel"
 ]
 
-START_PIC = "https://i.ibb.co/zhgphkVb/x.jpg"
-WELCOME_PIC = "https://i.ibb.co/8DLsQxtn/x.jpg"
+START_PIC = "https://i.ibb.co/8DLsQxtn/x.jpg"
+WELCOME_PIC = "https://i.ibb.co/zhgphkVb/x.jpg"
 
 bot = TeleBot(BOT_TOKEN)
 client = MongoClient(MONGO_URI)
