@@ -1,5 +1,6 @@
 from telebot import TeleBot, types
 from pymongo import MongoClient
+from datetime import datetime
 
 # ==================== CONFIG ====================
 BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
@@ -26,6 +27,7 @@ bot = TeleBot(BOT_TOKEN)
 client = MongoClient(MONGO_URI)
 db = client["referral_bot"]
 users_collection = db["users"]
+withdraw_collection = db["withdraw_history"]
 
 # ===== Helper: generate referral link =====
 def get_referral_link(user_id):
@@ -33,10 +35,11 @@ def get_referral_link(user_id):
 
 # ===== Main Menu Buttons =====
 def main_menu_keyboard(user_id):
+    user_data = users_collection.find_one({"user_id": user_id}) or {"points":0}
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard.add(
-        types.InlineKeyboardButton(text="🔗 Invite & Earn Points", callback_data="invite"),
-        types.InlineKeyboardButton(text="My Points 💰", callback_data="my_points")
+        types.InlineKeyboardButton(text="Invite & Earn 2️⃣ Points", callback_data="invite"),
+        types.InlineKeyboardButton(text=f"My Points 💰: {user_data.get('points',0)}", callback_data="my_points")
     )
     keyboard.add(
         types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw")
@@ -178,23 +181,30 @@ def handle_callbacks(call):
         )
 
     elif call.data == "my_points":
+        points = user_data.get("points",0)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
-        keyboard.add(types.InlineKeyboardButton(
-            text=f"My Points: {user_data.get('points',0)} 💰",
-            callback_data="dummy"
-        ))
+        keyboard.add(types.InlineKeyboardButton(text=f"My Points 💰: {points}", callback_data="dummy"))
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption="💰 Your Current Points:",
+            caption=f"💰 Your Current Points: {points}",
             reply_markup=keyboard
         )
 
     elif call.data == "withdraw":
-        if user_data.get("points",0) >= 10:
-            bot.answer_callback_query(call.id, "💵 Withdraw request sent!")
+        points = user_data.get("points",0)
+        if points >= 10:
+            # Create withdraw record
+            withdraw_collection.insert_one({
+                "user_id": user_id,
+                "points": points,
+                "date": datetime.utcnow()
+            })
+            # Reset points
             users_collection.update_one({"user_id": user_id}, {"$set":{"points":0}})
+
+            bot.answer_callback_query(call.id, f"💵 Withdraw request sent!\nPoints withdrawn: {points}")
         else:
             bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
 
@@ -205,7 +215,7 @@ def handle_callbacks(call):
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption="If you are facing any kind of problem please dm to @golgibody",
+            caption="🛠️ Contact Support: @golgibody",
             reply_markup=keyboard
         )
 
