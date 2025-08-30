@@ -167,8 +167,6 @@ def handle_callbacks(call):
     if call.data == "invite":
         referral_link = get_referral_link(user_id)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
-
-        # Back button
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
 
         bot.edit_message_caption(
@@ -185,7 +183,7 @@ def handle_callbacks(call):
             text=f"My Points: {user_data.get('points',0)} 💰",
             callback_data="dummy"
         ))
-        keyboard.add(types.InlineKeyboardButton(text="Back 🔙", callback_data="back_to_main"))
+        keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -201,10 +199,14 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
 
     elif call.data == "support":
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
+
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption="🛠️ Contact Support: @golgibody"
+            caption="🛠️ Contact Support: @golgibody",
+            reply_markup=keyboard
         )
 
     elif call.data == "how_to_use":
