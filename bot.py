@@ -49,8 +49,7 @@ def start(message):
     sent_msg = bot.send_photo(
         message.chat.id,
         photo=START_PIC,
-        caption=f"HELLO, {user_name}\n
-        You must need to join our channel for free account!!!",
+        caption=f"HELLO, {user_name}\nYou must need to join our channel for free account!!!",
         reply_markup=keyboard
     )
 
