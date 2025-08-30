@@ -5,7 +5,7 @@ from datetime import datetime
 # ==================== CONFIG ====================
 BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority"
-BOT_USERNAME = "Eeuei8w9w9wbbot"  # <-- apne bot ka username (without @)
+BOT_USERNAME = "Eeuei8w9w9wbbot"
 
 OWNER_ID = 7363327309  # <-- Apna Telegram ID yaha daal do
 
@@ -31,11 +31,10 @@ db = client["referral_bot"]
 users_collection = db["users"]
 withdraw_collection = db["withdraw_history"]
 
-# ===== Helper: generate referral link =====
+# ===== Helper Functions =====
 def get_referral_link(user_id):
     return f"https://t.me/{BOT_USERNAME}?start={user_id}"
 
-# ===== Main Menu Buttons =====
 def main_menu_keyboard(user_id):
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard.add(
@@ -51,7 +50,6 @@ def main_menu_keyboard(user_id):
     keyboard.add(
         types.InlineKeyboardButton(text="How To Use ❓", callback_data="how_to_use")
     )
-    # Show Admin Panel button only for OWNER
     if OWNER_ID:
         keyboard.add(types.InlineKeyboardButton(text="⚙️ Admin Panel", callback_data="admin_panel"))
     return keyboard
@@ -156,13 +154,11 @@ def handle_callbacks(call):
     user_id = call.from_user.id
     user_data = users_collection.find_one({"user_id": user_id}) or {"points":0}
 
-    # ===== User Menu =====
     if call.data == "invite":
         referral_link = get_referral_link(user_id)
         points = user_data.get("points", 0)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
-
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -184,22 +180,17 @@ def handle_callbacks(call):
 
     elif call.data == "withdraw":
         points = user_data.get("points",0)
-        if points >= 10:
-            withdraw_collection.insert_one({
-                "user_id": user_id,
-                "points": points,
-                "date": datetime.utcnow()
-            })
-            users_collection.update_one({"user_id": user_id}, {"$set":{"points":0}})
-
-            bot.answer_callback_query(call.id, f"💵 Withdraw request sent!\nPoints withdrawn: {points}")
-        else:
+        if points < 10:
             bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
+            return
+
+        msg = bot.send_message(call.message.chat.id,
+            f"💵 You have {points} points.\nSend the amount you want to withdraw (min 10 points):")
+        bot.register_next_step_handler(msg, process_withdraw)
 
     elif call.data == "support":
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
-
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -219,7 +210,6 @@ def handle_callbacks(call):
         )
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
-
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -246,63 +236,4 @@ def handle_callbacks(call):
         keyboard.add(
             types.InlineKeyboardButton(text="➕ Add Points", callback_data="admin_add_points"),
             types.InlineKeyboardButton(text="➖ Remove Points", callback_data="admin_remove_points"),
-            types.InlineKeyboardButton(text="👁‍🗨 Check User Points", callback_data="admin_check_points"),
-            types.InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="back_to_main")
-        )
-
-        bot.edit_message_caption(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            caption="⚙️ Admin Panel - Choose an action:",
-            reply_markup=keyboard
-        )
-
-    elif call.data.startswith("admin_"):
-        if call.from_user.id != OWNER_ID:
-            bot.answer_callback_query(call.id, "❌ You are not authorized.")
-            return
-
-        if call.data == "admin_add_points":
-            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to ADD")
-            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "add"))
-
-        elif call.data == "admin_remove_points":
-            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to REMOVE")
-            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "remove"))
-
-        elif call.data == "admin_check_points":
-            msg = bot.send_message(call.message.chat.id, "Send <user_id> to check points")
-            bot.register_next_step_handler(msg, process_admin_check_points)
-
-# ===== Admin Step Handlers =====
-def process_admin_points(message, action):
-    try:
-        user_id, points = map(int, message.text.split())
-        if action == "add":
-            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": points}})
-            if result.matched_count:
-                bot.reply_to(message, f"✅ Added {points} points to user {user_id}")
-            else:
-                bot.reply_to(message, "❌ User not found")
-        elif action == "remove":
-            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": -points}})
-            if result.matched_count:
-                bot.reply_to(message, f"✅ Removed {points} points from user {user_id}")
-            else:
-                bot.reply_to(message, "❌ User not found")
-    except:
-        bot.reply_to(message, "❌ Format error! Use <user_id> <points>")
-
-def process_admin_check_points(message):
-    try:
-        user_id = int(message.text)
-        user_data = users_collection.find_one({"user_id": user_id})
-        if user_data:
-            bot.reply_to(message, f"💰 User {user_id} has {user_data.get('points',0)} points")
-        else:
-            bot.reply_to(message, "❌ User not found")
-    except:
-        bot.reply_to(message, "❌ Format error! Send <user_id>")
-
-# ==================== POLLING ====================
-bot.polling()
+            types.InlineKeyboardButton(text="👁‍🗨 Check User Points", callback_data="
