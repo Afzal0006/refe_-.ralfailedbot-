@@ -19,7 +19,9 @@ messages_collection = db["messages"]
 
 # ===== /start COMMAND =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! I'm your AI Bot. I remember our conversation. Send me a message!")
+    await update.message.reply_text(
+        "Hello! I'm your AI Bot. I remember our conversation. Send me a message!"
+    )
 
 # ===== MESSAGE HANDLER =====
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -33,24 +35,24 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "from_bot": False
     })
 
-    # Retrieve last 5 messages from this user for context
+    # Retrieve last 5 messages for context
     history = messages_collection.find({"user_id": user_id}).sort("_id", -1).limit(5)
-    prompt_text = ""
+    messages = [{"role": "system", "content": "You are a helpful AI assistant."}]
+
     for msg in reversed(list(history)):
         if msg.get("from_bot"):
-            prompt_text += f"AI: {msg['message']}\n"
+            messages.append({"role": "assistant", "content": msg['message']})
         else:
-            prompt_text += f"User: {msg['message']}\n"
-    prompt_text += "AI:"
+            messages.append({"role": "user", "content": msg['message']})
 
-    # Get AI response
+    # Call OpenAI ChatCompletion
     try:
-        response = openai.Completion.create(
-            model="text-davinci-003",
-            prompt=prompt_text,
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
             max_tokens=150
         )
-        reply = response.choices[0].text.strip()
+        reply = response['choices'][0]['message']['content'].strip()
     except Exception as e:
         reply = f"Error: {str(e)}"
 
