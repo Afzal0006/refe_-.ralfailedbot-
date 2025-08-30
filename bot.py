@@ -1,8 +1,10 @@
 from telebot import TeleBot, types
 from pymongo import MongoClient
 
+# ==================== CONFIG ====================
 BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority"
+BOT_USERNAME = "Eeuei8w9w9wbbot"  # <-- yahan apne bot ka @username daalna hai (without @)
 
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
@@ -19,6 +21,7 @@ BUTTON_NAMES = [
 START_PIC = "https://i.ibb.co/8DLsQxtn/x.jpg"
 WELCOME_PIC = "https://i.ibb.co/zhgphkVb/x.jpg"
 
+# ==================== INIT ====================
 bot = TeleBot(BOT_TOKEN)
 client = MongoClient(MONGO_URI)
 db = client["referral_bot"]
@@ -26,7 +29,7 @@ users_collection = db["users"]
 
 # ===== Helper: generate referral link =====
 def get_referral_link(user_id):
-    return f"https://t.me/YourBotUsername?start={user_id}"  # Replace YourBotUsername with your bot username
+    return f"https://t.me/{BOT_USERNAME}?start={user_id}"
 
 # ===== Main Menu Buttons =====
 def main_menu_keyboard(user_id):
@@ -49,26 +52,46 @@ def main_menu_keyboard(user_id):
 # ===== Start Command =====
 @bot.message_handler(commands=['start'])
 def start(message):
+    args = message.text.split()
+    user_id = message.from_user.id
     user_name = message.from_user.first_name or "User"
 
-    # Save user in DB
-    users_collection.update_one(
-        {"user_id": message.from_user.id},
-        {"$set": {"name": user_name, "joined": False, "points": 0}},
-        upsert=True
-    )
+    # Check if user is new
+    existing_user = users_collection.find_one({"user_id": user_id})
+
+    if not existing_user:
+        # Save user in DB
+        users_collection.insert_one({
+            "user_id": user_id,
+            "name": user_name,
+            "joined": False,
+            "points": 0
+        })
+
+        # Referral check
+        if len(args) > 1:
+            try:
+                referrer_id = int(args[1])
+                if referrer_id != user_id:  # Prevent self-referral
+                    users_collection.update_one(
+                        {"user_id": referrer_id},
+                        {"$inc": {"points": 2}}
+                    )
+                    bot.send_message(referrer_id, f"🎉 You earned 2 points! A new user joined with your link.")
+            except:
+                pass
 
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    
+
     # 3 join buttons
     for name, url in zip(BUTTON_NAMES, CHANNELS_URLS):
         button = types.InlineKeyboardButton(text=name, url=url)
         keyboard.add(button)
-    
+
     # Check Joined button
     check_button = types.InlineKeyboardButton(text="Check Joined ✅", callback_data="check_join")
     keyboard.add(check_button)
-    
+
     sent_msg = bot.send_photo(
         message.chat.id,
         photo=START_PIC,
@@ -135,16 +158,29 @@ def handle_callbacks(call):
     user_data = users_collection.find_one({"user_id": user_id}) or {"points":0}
 
     if call.data == "invite":
+        referral_link = get_referral_link(user_id)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
-        keyboard.add(types.InlineKeyboardButton(
-            text=f"Your Referral Link:\n{get_referral_link(user_id)}",
-            callback_data="dummy"
-        ))
-        keyboard.add(types.InlineKeyboardButton(text="Back 🔙", callback_data="back_to_main"))
+
+        # Referral Link button
+        keyboard.add(
+            types.InlineKeyboardButton(
+                text="📢 My Referral Link",
+                url=referral_link
+            )
+        )
+
+        # Back button
+        keyboard.add(
+            types.InlineKeyboardButton(
+                text="🔙 Back",
+                callback_data="back_to_main"
+            )
+        )
+
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption="📢 Invite & Earn 2️⃣ Points\nShare your unique link below:",
+            caption="📢 Invite & Earn 2️⃣ Points\nShare your unique link below 👇",
             reply_markup=keyboard
         )
 
@@ -170,7 +206,6 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
 
     elif call.data == "support":
-        # Support text only
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
