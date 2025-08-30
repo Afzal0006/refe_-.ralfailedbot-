@@ -7,6 +7,8 @@ BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority"
 BOT_USERNAME = "Eeuei8w9w9wbbot"  # <-- apne bot ka username (without @)
 
+OWNER_ID = 7363327309 # <-- Apna Telegram ID yaha daal do
+
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
     "https://t.me/testing7889gy",
@@ -230,4 +232,72 @@ def handle_callbacks(call):
             reply_markup=main_menu_keyboard(user_id)
         )
 
+# ==================== ADMIN COMMANDS ====================
+@bot.message_handler(commands=['addpoints'])
+def add_points(message):
+    if message.from_user.id != OWNER_ID:
+        bot.reply_to(message, "❌ You are not authorized.")
+        return
+
+    try:
+        _, user_id, points = message.text.split()
+        user_id = int(user_id)
+        points = int(points)
+
+        result = users_collection.update_one(
+            {"user_id": user_id},
+            {"$inc": {"points": points}}
+        )
+
+        if result.matched_count:
+            bot.reply_to(message, f"✅ Added {points} points to user {user_id}.")
+        else:
+            bot.reply_to(message, "❌ User not found.")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Usage: /addpoints <user_id> <points>\nError: {e}")
+
+
+@bot.message_handler(commands=['removepoints'])
+def remove_points(message):
+    if message.from_user.id != OWNER_ID:
+        bot.reply_to(message, "❌ You are not authorized.")
+        return
+
+    try:
+        _, user_id, points = message.text.split()
+        user_id = int(user_id)
+        points = int(points)
+
+        result = users_collection.update_one(
+            {"user_id": user_id},
+            {"$inc": {"points": -points}}
+        )
+
+        if result.matched_count:
+            bot.reply_to(message, f"✅ Removed {points} points from user {user_id}.")
+        else:
+            bot.reply_to(message, "❌ User not found.")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Usage: /removepoints <user_id> <points>\nError: {e}")
+
+
+@bot.message_handler(commands=['userpoints'])
+def user_points(message):
+    if message.from_user.id != OWNER_ID:
+        bot.reply_to(message, "❌ You are not authorized.")
+        return
+
+    try:
+        _, user_id = message.text.split()
+        user_id = int(user_id)
+        user_data = users_collection.find_one({"user_id": user_id})
+        if user_data:
+            bot.reply_to(message, f"💰 User {user_id} has {user_data.get('points',0)} points.")
+        else:
+            bot.reply_to(message, "❌ User not found.")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Usage: /userpoints <user_id>\nError: {e}")
+
+
+# ==================== POLLING ====================
 bot.polling()
