@@ -4,7 +4,7 @@ from pymongo import MongoClient
 # ==================== CONFIG ====================
 BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority"
-BOT_USERNAME = "Eeuei8w9w9wbbot"  # <-- apne bot ka @username (without @)
+BOT_USERNAME = "Eeuei8w9w9wbbot"  # <-- apne bot ka username (without @)
 
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
@@ -56,11 +56,11 @@ def start(message):
     user_id = message.from_user.id
     user_name = message.from_user.first_name or "User"
 
-    # Check if user is new
+    # Check if user already exists
     existing_user = users_collection.find_one({"user_id": user_id})
 
     if not existing_user:
-        # Save user in DB
+        # Save new user in DB
         users_collection.insert_one({
             "user_id": user_id,
             "name": user_name,
@@ -68,19 +68,26 @@ def start(message):
             "points": 0
         })
 
-        # Referral check
+        # ===== Referral check =====
         if len(args) > 1:
             try:
                 referrer_id = int(args[1])
                 if referrer_id != user_id:  # Prevent self-referral
-                    users_collection.update_one(
-                        {"user_id": referrer_id},
-                        {"$inc": {"points": 2}}
-                    )
-                    bot.send_message(referrer_id, f"🎉 You earned 2 points! A new user joined with your link.")
-            except:
-                pass
+                    referrer = users_collection.find_one({"user_id": referrer_id})
+                    if referrer:  # Only if referrer exists
+                        users_collection.update_one(
+                            {"user_id": referrer_id},
+                            {"$inc": {"points": 2}}
+                        )
+                        new_points = referrer.get("points", 0) + 2
+                        bot.send_message(
+                            referrer_id,
+                            f"🎉 You earned 2 points!\nNow you have {new_points} points."
+                        )
+            except Exception as e:
+                print("Referral error:", e)
 
+    # ===== Show Join Channels UI =====
     keyboard = types.InlineKeyboardMarkup(row_width=2)
 
     # 3 join buttons
