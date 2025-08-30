@@ -35,11 +35,10 @@ def get_referral_link(user_id):
 
 # ===== Main Menu Buttons =====
 def main_menu_keyboard(user_id):
-    user_data = users_collection.find_one({"user_id": user_id}) or {"points":0}
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard.add(
-        types.InlineKeyboardButton(text="Invite & Earn 2️⃣ Points", callback_data="invite"),
-        types.InlineKeyboardButton(text=f"My Points 💰: {user_data.get('points',0)}", callback_data="my_points")
+        types.InlineKeyboardButton(text="Invite & Earn Points", callback_data="invite"),
+        types.InlineKeyboardButton(text="My Points 💰", callback_data="my_points")
     )
     keyboard.add(
         types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw")
@@ -59,11 +58,9 @@ def start(message):
     user_id = message.from_user.id
     user_name = message.from_user.first_name or "User"
 
-    # Check if user already exists
     existing_user = users_collection.find_one({"user_id": user_id})
 
     if not existing_user:
-        # Save new user in DB
         users_collection.insert_one({
             "user_id": user_id,
             "name": user_name,
@@ -71,13 +68,12 @@ def start(message):
             "points": 0
         })
 
-        # ===== Referral check =====
         if len(args) > 1:
             try:
                 referrer_id = int(args[1])
-                if referrer_id != user_id:  # Prevent self-referral
+                if referrer_id != user_id:
                     referrer = users_collection.find_one({"user_id": referrer_id})
-                    if referrer:  # Only if referrer exists
+                    if referrer:
                         users_collection.update_one(
                             {"user_id": referrer_id},
                             {"$inc": {"points": 2}}
@@ -90,17 +86,10 @@ def start(message):
             except Exception as e:
                 print("Referral error:", e)
 
-    # ===== Show Join Channels UI =====
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-
-    # 3 join buttons
     for name, url in zip(BUTTON_NAMES, CHANNELS_URLS):
-        button = types.InlineKeyboardButton(text=name, url=url)
-        keyboard.add(button)
-
-    # Check Joined button
-    check_button = types.InlineKeyboardButton(text="Check Joined ✅", callback_data="check_join")
-    keyboard.add(check_button)
+        keyboard.add(types.InlineKeyboardButton(text=name, url=url))
+    keyboard.add(types.InlineKeyboardButton(text="Check Joined ✅", callback_data="check_join"))
 
     sent_msg = bot.send_photo(
         message.chat.id,
@@ -109,9 +98,8 @@ def start(message):
         reply_markup=keyboard
     )
 
-    # Save start message ID for deletion
     users_collection.update_one(
-        {"user_id": message.from_user.id},
+        {"user_id": user_id},
         {"$set": {"start_msg_id": sent_msg.message_id}}
     )
 
@@ -134,13 +122,11 @@ def check_join(call):
             break
 
     if joined_all:
-        # Update DB
         users_collection.update_one(
             {"user_id": user_id},
             {"$set": {"joined": True}}
         )
 
-        # Delete /start message
         user_data = users_collection.find_one({"user_id": user_id})
         if user_data and "start_msg_id" in user_data:
             try:
@@ -148,7 +134,6 @@ def check_join(call):
             except:
                 pass
 
-        # Send Welcome message with Main Menu
         bot.send_photo(
             call.message.chat.id,
             photo=WELCOME_PIC,
@@ -157,7 +142,6 @@ def check_join(call):
         )
 
         bot.answer_callback_query(call.id, "✅ You joined all channels!")
-
     else:
         bot.answer_callback_query(call.id, "❌ You haven't joined all channels.")
 
@@ -169,13 +153,14 @@ def handle_callbacks(call):
 
     if call.data == "invite":
         referral_link = get_referral_link(user_id)
+        points = user_data.get("points", 0)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
 
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption=f"📢 Your Referral Link:\n\n`{referral_link}`\n\n(Tap to copy 👆)",
+            caption=f"📢 Your Referral Link:\n`{referral_link}`\n\n💰 Your Points: {points}",
             parse_mode="Markdown",
             reply_markup=keyboard
         )
@@ -183,7 +168,6 @@ def handle_callbacks(call):
     elif call.data == "my_points":
         points = user_data.get("points",0)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
-        keyboard.add(types.InlineKeyboardButton(text=f"My Points 💰: {points}", callback_data="dummy"))
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
@@ -195,13 +179,11 @@ def handle_callbacks(call):
     elif call.data == "withdraw":
         points = user_data.get("points",0)
         if points >= 10:
-            # Create withdraw record
             withdraw_collection.insert_one({
                 "user_id": user_id,
                 "points": points,
                 "date": datetime.utcnow()
             })
-            # Reset points
             users_collection.update_one({"user_id": user_id}, {"$set":{"points":0}})
 
             bot.answer_callback_query(call.id, f"💵 Withdraw request sent!\nPoints withdrawn: {points}")
@@ -229,7 +211,6 @@ def handle_callbacks(call):
             "5. Click 'Withdraw' to redeem points (min 10 points).\n"
             "6. For support, click 'Support' button."
         )
-
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
 
