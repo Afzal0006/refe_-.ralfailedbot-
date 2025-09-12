@@ -7,7 +7,7 @@ BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority"
 BOT_USERNAME = "Eeuei8w9w9wbbot"
 
-OWNER_ID = 6998916494  # <-- Apna Telegram ID
+OWNER_ID = 6998916494  # <-- Apna Telegram ID yaha daal do
 
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
@@ -39,9 +39,15 @@ def main_menu_keyboard(user_id):
         types.InlineKeyboardButton(text="Invite & Earn Points", callback_data="invite"),
         types.InlineKeyboardButton(text="My Points 💰", callback_data="my_points")
     )
-    keyboard.add(types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw"))
-    keyboard.add(types.InlineKeyboardButton(text="Support 🛠️", callback_data="support"))
-    keyboard.add(types.InlineKeyboardButton(text="How To Use ❓", callback_data="how_to_use"))
+    keyboard.add(
+        types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw")
+    )
+    keyboard.add(
+        types.InlineKeyboardButton(text="Support 🛠️", callback_data="support")
+    )
+    keyboard.add(
+        types.InlineKeyboardButton(text="How To Use ❓", callback_data="how_to_use")
+    )
     if OWNER_ID:
         keyboard.add(types.InlineKeyboardButton(text="⚙️ Admin Panel", callback_data="admin_panel"))
     return keyboard
@@ -63,7 +69,6 @@ def start(message):
             "points": 0
         })
 
-        # ===== Referral System Update =====
         if len(args) > 1:
             try:
                 referrer_id = int(args[1])
@@ -75,12 +80,15 @@ def start(message):
                             {"$inc": {"points": 2}}
                         )
                         new_points = referrer.get("points", 0) + 2
-
-                        # Referrer ko personalized message
+                        # 🎉 Referrer ko message
                         bot.send_message(
                             referrer_id,
-                            f"🎉 {user_name} joined using your referral link!\n"
-                            f"✅ You earned 2 points.\n💰 Total Points: {new_points}"
+                            f"🎉 You earned 2 points!\nNow you have {new_points} points."
+                        )
+                        # 📩 Owner ko notification
+                        bot.send_message(
+                            OWNER_ID,
+                            f"👤 New Referral!\nUser: {user_name} (ID: {user_id})\nReferred by: {referrer_id}\nReferrer new points: {new_points}"
                         )
             except Exception as e:
                 print("Referral error:", e)
@@ -148,7 +156,7 @@ def check_join(call):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     user_id = call.from_user.id
-    user_data = users_collection.find_one({"user_id": user_id}) or {"points":0}
+    user_data = users_collection.find_one({"user_id": user_id}) or {"points": 0}
 
     if call.data == "invite":
         referral_link = get_referral_link(user_id)
@@ -164,7 +172,7 @@ def handle_callbacks(call):
         )
 
     elif call.data == "my_points":
-        points = user_data.get("points",0)
+        points = user_data.get("points", 0)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
         bot.edit_message_caption(
@@ -175,7 +183,7 @@ def handle_callbacks(call):
         )
 
     elif call.data == "withdraw":
-        points = user_data.get("points",0)
+        points = user_data.get("points", 0)
         if points < 10:
             bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
             return
@@ -262,8 +270,9 @@ def handle_callbacks(call):
 # ===== Withdraw Step Handler =====
 def process_withdraw(message):
     user_id = message.from_user.id
-    user_data = users_collection.find_one({"user_id": user_id}) or {"points":0}
-    total_points = user_data.get("points",0)
+    user_name = message.from_user.first_name or "User"
+    user_data = users_collection.find_one({"user_id": user_id}) or {"points": 0}
+    total_points = user_data.get("points", 0)
 
     try:
         withdraw_amount = int(message.text)
@@ -281,7 +290,15 @@ def process_withdraw(message):
             "date": datetime.utcnow()
         })
 
-        bot.reply_to(message, f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\nRemaining points: {total_points - withdraw_amount}")
+        remaining = total_points - withdraw_amount
+        # ✅ User confirmation
+        bot.reply_to(message, f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\nRemaining points: {remaining}")
+
+        # 📩 Owner ko notification
+        bot.send_message(
+            OWNER_ID,
+            f"📢 Withdraw Request!\n\n👤 User: {user_name} (ID: {user_id})\n💵 Amount: {withdraw_amount} points\n💰 Remaining Balance: {remaining}"
+        )
 
     except:
         bot.reply_to(message, "❌ Invalid input! Send numeric amount only.")
@@ -310,7 +327,7 @@ def process_admin_check_points(message):
         user_id = int(message.text)
         user_data = users_collection.find_one({"user_id": user_id})
         if user_data:
-            bot.reply_to(message, f"💰 User {user_id} has {user_data.get('points',0)} points")
+            bot.reply_to(message, f"💰 User {user_id} has {user_data.get('points', 0)} points")
         else:
             bot.reply_to(message, "❌ User not found")
     except:
