@@ -4,7 +4,7 @@ from datetime import datetime
 
 # ==================== CONFIG ====================
 BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
-MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority"
+MONGO_URI = "mongodb+srv://TRUSTLYTRANSACTIONBOT:TRUSTLYTRANSACTIONBOT@cluster0.t60mxb7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 BOT_USERNAME = "Eeuei8w9w9wbbot"
 
 OWNER_ID = 6998916494  # <-- Apna Telegram ID yaha daal do
