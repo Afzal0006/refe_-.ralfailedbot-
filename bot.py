@@ -11,13 +11,11 @@ OWNER_ID = 7660597078  # <-- Apna Telegram ID yaha daal do
 
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
-    "https://t.me/testing7889gy",
     "https://t.me/SexyEmoji"
 ]
 
 BUTTON_NAMES = [
     "Join channel",
-    "💎 Join VIP Channel",
     "🎯 Join Fun Channel"
 ]
 
