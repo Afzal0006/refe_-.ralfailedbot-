@@ -270,7 +270,7 @@ def handle_callbacks(call):
 # ===== Withdraw Step Handler =====
 def process_withdraw(message):
     user_id = message.from_user.id
-    user_name = message.from_user.first_name or "User"
+    username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.first_name
     user_data = users_collection.find_one({"user_id": user_id}) or {"points": 0}
     total_points = user_data.get("points", 0)
 
@@ -292,12 +292,18 @@ def process_withdraw(message):
 
         remaining = total_points - withdraw_amount
         # ✅ User confirmation
-        bot.reply_to(message, f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\nRemaining points: {remaining}")
+        bot.reply_to(
+            message,
+            f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\nRemaining points: {remaining}"
+        )
 
-        # 📩 Owner ko notification
+        # 📩 Owner notification
         bot.send_message(
             OWNER_ID,
-            f"📢 Withdraw Request!\n\n👤 User: {user_name} (ID: {user_id})\n💵 Amount: {withdraw_amount} points\n💰 Remaining Balance: {remaining}"
+            f"📢 Withdraw Request!\n"
+            f"👤 User: {username} (ID: {user_id})\n"
+            f"💵 Amount: {withdraw_amount} points\n"
+            f"💰 Remaining Balance: {remaining}"
         )
 
     except:
