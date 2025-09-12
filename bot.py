@@ -7,7 +7,7 @@ BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority"
 BOT_USERNAME = "Eeuei8w9w9wbbot"
 
-OWNER_ID = 6998916494  # <-- Apna Telegram ID yaha daal do
+OWNER_ID = 6998916494  # <-- Apna Telegram ID
 
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
@@ -39,15 +39,9 @@ def main_menu_keyboard(user_id):
         types.InlineKeyboardButton(text="Invite & Earn Points", callback_data="invite"),
         types.InlineKeyboardButton(text="My Points 💰", callback_data="my_points")
     )
-    keyboard.add(
-        types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw")
-    )
-    keyboard.add(
-        types.InlineKeyboardButton(text="Support 🛠️", callback_data="support")
-    )
-    keyboard.add(
-        types.InlineKeyboardButton(text="How To Use ❓", callback_data="how_to_use")
-    )
+    keyboard.add(types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw"))
+    keyboard.add(types.InlineKeyboardButton(text="Support 🛠️", callback_data="support"))
+    keyboard.add(types.InlineKeyboardButton(text="How To Use ❓", callback_data="how_to_use"))
     if OWNER_ID:
         keyboard.add(types.InlineKeyboardButton(text="⚙️ Admin Panel", callback_data="admin_panel"))
     return keyboard
@@ -69,6 +63,7 @@ def start(message):
             "points": 0
         })
 
+        # ===== Referral System Update =====
         if len(args) > 1:
             try:
                 referrer_id = int(args[1])
@@ -80,9 +75,12 @@ def start(message):
                             {"$inc": {"points": 2}}
                         )
                         new_points = referrer.get("points", 0) + 2
+
+                        # Referrer ko personalized message
                         bot.send_message(
                             referrer_id,
-                            f"🎉 You earned 2 points!\nNow you have {new_points} points."
+                            f"🎉 {user_name} joined using your referral link!\n"
+                            f"✅ You earned 2 points.\n💰 Total Points: {new_points}"
                         )
             except Exception as e:
                 print("Referral error:", e)
