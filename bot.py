@@ -291,10 +291,12 @@ def process_withdraw(message):
         })
 
         remaining = total_points - withdraw_amount
-        # ✅ User confirmation
+        # ✅ User confirmation + support
         bot.reply_to(
             message,
-            f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\nRemaining points: {remaining}"
+            f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\n"
+            f"Remaining points: {remaining}\n\n"
+            f"🛠️ Contact Support: @golgibody dm with your upi id !!"
         )
 
         # 📩 Owner notification
