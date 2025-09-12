@@ -58,6 +58,7 @@ def start(message):
     args = message.text.split()
     user_id = message.from_user.id
     user_name = message.from_user.first_name or "User"
+    username = message.from_user.username
 
     existing_user = users_collection.find_one({"user_id": user_id})
 
@@ -65,37 +66,44 @@ def start(message):
         users_collection.insert_one({
             "user_id": user_id,
             "name": user_name,
-            "username": message.from_user.username,
+            "username": username,
             "joined": False,
             "points": 0
         })
+    else:
+        # username aur name har bar update ho jaayega
+        users_collection.update_one(
+            {"user_id": user_id},
+            {"$set": {"username": username, "name": user_name}}
+        )
 
-        if len(args) > 1:
-            try:
-                referrer_id = int(args[1])
-                if referrer_id != user_id:
-                    referrer = users_collection.find_one({"user_id": referrer_id})
-                    if referrer:
-                        users_collection.update_one(
-                            {"user_id": referrer_id},
-                            {"$inc": {"points": 2}}
-                        )
-                        new_points = referrer.get("points", 0) + 2
-                        # 🎉 Referrer ko message
-                        bot.send_message(
-                            referrer_id,
-                            f"🎉 You earned 2 points!\nNow you have {new_points} points."
-                        )
-                        # Owner ko notification
-                        bot.send_message(
-                            OWNER_ID,
-                            f"👤 New Referral!\n"
-                            f"User: {user_name} (@{message.from_user.username})\n"
-                            f"Referred by: {referrer.get('name')} (@{referrer.get('username')})\n"
-                            f"Referrer new points: {new_points}"
-                        )
-            except Exception as e:
-                print("Referral error:", e)
+    # Referral system
+    if not existing_user and len(args) > 1:
+        try:
+            referrer_id = int(args[1])
+            if referrer_id != user_id:
+                referrer = users_collection.find_one({"user_id": referrer_id})
+                if referrer:
+                    users_collection.update_one(
+                        {"user_id": referrer_id},
+                        {"$inc": {"points": 2}}
+                    )
+                    new_points = referrer.get("points", 0) + 2
+                    # 🎉 Referrer ko message
+                    bot.send_message(
+                        referrer_id,
+                        f"🎉 You earned 2 points!\nNow you have {new_points} points."
+                    )
+                    # Owner ko notification
+                    bot.send_message(
+                        OWNER_ID,
+                        f"👤 New Referral!\n"
+                        f"User: {user_name} (@{username})\n"
+                        f"Referred by: {referrer.get('name')} (@{referrer.get('username')})\n"
+                        f"Referrer new points: {new_points}"
+                    )
+        except Exception as e:
+            print("Referral error:", e)
 
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     for name, url in zip(BUTTON_NAMES, CHANNELS_URLS):
@@ -359,7 +367,11 @@ def show_all_points(message):
 
     text = "📊 Users Points:\n\n"
     for i, user in enumerate(users, start=1):
-        username = f"@{user.get('username')}" if user.get('username') else user.get("name", "User")
+        username = user.get('username')
+        if username:
+            username = f"@{username}"
+        else:
+            username = user.get("name", "User")
         points = user.get("points", 0)
         text += f"{i}. {username} — {points} points\n"
 
