@@ -86,12 +86,12 @@ def start(message):
                             f"🎉 You earned 2 points!\nNow you have {new_points} points."
                         )
                         # Owner ko notification
-bot.send_message(
-    OWNER_ID,
-    f"👤 New Referral!\n"
-    f"User: {user_name} (@{update.message.from_user.username})\n"
-    f"Referred by: {referrer.get('name')} (@{referrer.get('username')})\n"
-    f"Referrer new points: {new_points}"
+                        bot.send_message(
+                        OWNER_ID,
+                         f"👤 New Referral!\n"
+                         f"User: {user_name} (@{update.message.from_user.username})\n"
+                         f"Referred by: {referrer.get('name')} (@{referrer.get('username')})\n"
+                         f"Referrer new points: {new_points}"
 )
             except Exception as e:
                 print("Referral error:", e)
