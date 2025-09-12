@@ -65,6 +65,7 @@ def start(message):
         users_collection.insert_one({
             "user_id": user_id,
             "name": user_name,
+            "username": message.from_user.username,
             "joined": False,
             "points": 0
         })
@@ -87,12 +88,12 @@ def start(message):
                         )
                         # Owner ko notification
                         bot.send_message(
-                        OWNER_ID,
-                         f"👤 New Referral!\n"
-                         f"User: {user_name} (@{update.message.from_user.username})\n"
-                         f"Referred by: {referrer.get('name')} (@{referrer.get('username')})\n"
-                         f"Referrer new points: {new_points}"
-)
+                            OWNER_ID,
+                            f"👤 New Referral!\n"
+                            f"User: {user_name} (@{message.from_user.username})\n"
+                            f"Referred by: {referrer.get('name')} (@{referrer.get('username')})\n"
+                            f"Referrer new points: {new_points}"
+                        )
             except Exception as e:
                 print("Referral error:", e)
 
@@ -343,6 +344,26 @@ def process_admin_check_points(message):
             bot.reply_to(message, "❌ User not found")
     except:
         bot.reply_to(message, "❌ Format error! Send <user_id>")
+
+# ===== NEW COMMAND: /points (Owner only) =====
+@bot.message_handler(commands=['points'])
+def show_all_points(message):
+    if message.from_user.id != OWNER_ID:
+        bot.reply_to(message, "❌ You are not authorized to use this command.")
+        return
+
+    users = list(users_collection.find())
+    if not users:
+        bot.reply_to(message, "❌ No users found in database.")
+        return
+
+    text = "📊 Users Points:\n\n"
+    for i, user in enumerate(users, start=1):
+        username = f"@{user.get('username')}" if user.get('username') else user.get("name", "User")
+        points = user.get("points", 0)
+        text += f"{i}. {username} — {points} points\n"
+
+    bot.reply_to(message, text)
 
 # ==================== POLLING ====================
 bot.polling()
