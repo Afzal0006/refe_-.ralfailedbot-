@@ -41,7 +41,7 @@ def main_menu_keyboard(user_id):
     )
     keyboard.add(
         types.InlineKeyboardButton(text="👥 My Team", callback_data="my_team"),
-        types.InlineKeyboardButton(text="Commission (Report Only)", callback_data="commission")
+        types.InlineKeyboardButton(text="Commission", callback_data="commission")
     )
     keyboard.add(
         types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw")
