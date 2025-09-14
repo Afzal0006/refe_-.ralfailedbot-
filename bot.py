@@ -309,9 +309,11 @@ def handle_callbacks(call):
             types.InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="back_to_main")
         )
 
-        bot.send_message(
-            call.message.chat.id,
-            "⚙️ Admin Panel - Choose an action:",
+        # ✅ FIX: ab naya message nahi aayega, same message edit hoga
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption="⚙️ Admin Panel - Choose an action:",
             reply_markup=keyboard
         )
 
