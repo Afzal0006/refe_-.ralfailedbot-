@@ -3,11 +3,11 @@ from pymongo import MongoClient
 from datetime import datetime
 
 # ==================== CONFIG ====================
-BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
-MONGO_URI = "mongodb+srv://TRUSTLYTRANSACTIONBOT:TRUSTLYTRANSACTIONBOT@cluster0.t60mxb7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-BOT_USERNAME = "Eeuei8w9w9wbbot"
+BOT_TOKEN = "7643831340:AAGieuPJND4MekAutSf3xzta1qdoKo5mbZU"
+MONGO_URI = "mongodb+srv://afzal99550:afzal99550@cluster0.aqmbh9q.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+BOT_USERNAME = "MusafirMmBot"
 
-OWNER_ID = 7596004396  # <-- Apna Telegram ID yaha daal do
+OWNER_ID = 6998916494  # <-- Apna Telegram ID yaha daal do
 
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
@@ -36,8 +36,12 @@ def get_referral_link(user_id):
 def main_menu_keyboard(user_id):
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard.add(
-        types.InlineKeyboardButton(text="Invite & Earn Points", callback_data="invite"),
-        types.InlineKeyboardButton(text="My Points 💰", callback_data="my_points")
+        types.InlineKeyboardButton(text="Invite & Earn", callback_data="invite"),
+        types.InlineKeyboardButton(text="My Team 👥", callback_data="my_team")
+    )
+    keyboard.add(
+        types.InlineKeyboardButton(text="Commission 💰", callback_data="commission"),
+        types.InlineKeyboardButton(text="Balance 🏦", callback_data="balance")
     )
     keyboard.add(
         types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw")
@@ -68,10 +72,11 @@ def start(message):
             "name": user_name,
             "username": username,
             "joined": False,
-            "points": 0
+            "commission": 0,
+            "balance": 0,
+            "referred_by": None
         })
     else:
-        # username aur name har bar update ho jaayega
         users_collection.update_one(
             {"user_id": user_id},
             {"$set": {"username": username, "name": user_name}}
@@ -86,21 +91,23 @@ def start(message):
                 if referrer:
                     users_collection.update_one(
                         {"user_id": referrer_id},
-                        {"$inc": {"points": 2}}
+                        {"$inc": {"commission": 2}}
                     )
-                    new_points = referrer.get("points", 0) + 2
-                    # 🎉 Referrer ko message
+                    users_collection.update_one(
+                        {"user_id": user_id},
+                        {"$set": {"referred_by": referrer_id}}
+                    )
+                    new_commission = referrer.get("commission", 0) + 2
                     bot.send_message(
                         referrer_id,
-                        f"🎉 You earned 2 points!\nNow you have {new_points} points."
+                        f"🎉 You earned 2 commission!\nNow you have {new_commission} commission."
                     )
-                    # Owner ko notification
                     bot.send_message(
                         OWNER_ID,
                         f"👤 New Referral!\n"
                         f"User: {user_name} (@{username})\n"
                         f"Referred by: {referrer.get('name')} (@{referrer.get('username')})\n"
-                        f"Referrer new points: {new_points}"
+                        f"Referrer new commission: {new_commission}"
                     )
         except Exception as e:
             print("Referral error:", e)
@@ -168,39 +175,63 @@ def check_join(call):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     user_id = call.from_user.id
-    user_data = users_collection.find_one({"user_id": user_id}) or {"points": 0}
+    user_data = users_collection.find_one({"user_id": user_id}) or {"commission": 0, "balance": 0}
 
     if call.data == "invite":
         referral_link = get_referral_link(user_id)
-        points = user_data.get("points", 0)
+        commission = user_data.get("commission", 0)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption=f"📢 Your Referral Link:\n`{referral_link}`\n\n💰 Your Points: {points}",
+            caption=f"📢 Your Referral Link:\n`{referral_link}`\n\n💰 Your Commission: {commission}",
             parse_mode="Markdown",
             reply_markup=keyboard
         )
 
-    elif call.data == "my_points":
-        points = user_data.get("points", 0)
+    elif call.data == "my_team":
+        referrals = users_collection.count_documents({"referred_by": user_id})
+        commission = user_data.get("commission", 0)
+        balance = user_data.get("balance", 0)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption=f"💰 Your Current Points: {points}",
+            caption=f"👥 Your Team: {referrals} members\n💰 Commission: {commission}\n🏦 Balance: {balance}",
+            reply_markup=keyboard
+        )
+
+    elif call.data == "commission":
+        commission = user_data.get("commission", 0)
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption=f"💰 Your Commission: {commission}",
+            reply_markup=keyboard
+        )
+
+    elif call.data == "balance":
+        balance = user_data.get("balance", 0)
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption=f"🏦 Your Balance: {balance}",
             reply_markup=keyboard
         )
 
     elif call.data == "withdraw":
-        points = user_data.get("points", 0)
-        if points < 10:
-            bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
+        commission = user_data.get("commission", 0)
+        if commission < 10:
+            bot.answer_callback_query(call.id, "❌ Minimum 10 commission required for withdrawal.")
             return
         msg = bot.send_message(call.message.chat.id,
-            f"💵 You have {points} points.\nSend the amount you want to withdraw (min 10 points):")
+            f"💵 You have {commission} commission.\nSend the amount you want to withdraw (min 10):")
         bot.register_next_step_handler(msg, process_withdraw)
 
     elif call.data == "support":
@@ -217,11 +248,11 @@ def handle_callbacks(call):
         instructions = (
             "📌 How to Use Bot:\n\n"
             "1. Join all required channels.\n"
-            "2. Click 'Invite & Earn Points' to get your referral link.\n"
-            "3. Earn 2 points per referral.\n"
-            "4. Click 'My Points' to see your points.\n"
-            "5. Click 'Withdraw' to redeem points (min 10 points).\n"
-            "6. For support, click 'Support' button."
+            "2. Click 'Invite & Earn' to get your referral link.\n"
+            "3. Earn 2 commission per referral.\n"
+            "4. Use 'My Team' to check your referrals.\n"
+            "5. Check 'Balance' (admin adds it).\n"
+            "6. Withdraw minimum 10 commission.\n"
         )
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
@@ -249,9 +280,8 @@ def handle_callbacks(call):
 
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(
-            types.InlineKeyboardButton(text="➕ Add Points", callback_data="admin_add_points"),
-            types.InlineKeyboardButton(text="➖ Remove Points", callback_data="admin_remove_points"),
-            types.InlineKeyboardButton(text="👁‍🗨 Check User Points", callback_data="admin_check_points"),
+            types.InlineKeyboardButton(text="➕ Add Balance", callback_data="admin_add_balance"),
+            types.InlineKeyboardButton(text="👁‍🗨 Check User", callback_data="admin_check_user"),
             types.InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="back_to_main")
         )
 
@@ -267,115 +297,78 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id, "❌ You are not authorized.")
             return
 
-        if call.data == "admin_add_points":
-            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to ADD")
-            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "add"))
+        if call.data == "admin_add_balance":
+            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <amount>")
+            bot.register_next_step_handler(msg, process_admin_add_balance)
 
-        elif call.data == "admin_remove_points":
-            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to REMOVE")
-            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "remove"))
-
-        elif call.data == "admin_check_points":
-            msg = bot.send_message(call.message.chat.id, "Send <user_id> to check points")
-            bot.register_next_step_handler(msg, process_admin_check_points)
+        elif call.data == "admin_check_user":
+            msg = bot.send_message(call.message.chat.id, "Send <user_id> to check commission & balance")
+            bot.register_next_step_handler(msg, process_admin_check_user)
 
 # ===== Withdraw Step Handler =====
 def process_withdraw(message):
     user_id = message.from_user.id
     username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.first_name
-    user_data = users_collection.find_one({"user_id": user_id}) or {"points": 0}
-    total_points = user_data.get("points", 0)
+    user_data = users_collection.find_one({"user_id": user_id}) or {"commission": 0}
+    total_commission = user_data.get("commission", 0)
 
     try:
         withdraw_amount = int(message.text)
         if withdraw_amount < 10:
-            bot.reply_to(message, "❌ Minimum 10 points required to withdraw.")
+            bot.reply_to(message, "❌ Minimum 10 commission required to withdraw.")
             return
-        if withdraw_amount > total_points:
-            bot.reply_to(message, f"❌ You only have {total_points} points. Enter a valid amount.")
+        if withdraw_amount > total_commission:
+            bot.reply_to(message, f"❌ You only have {total_commission}. Enter a valid amount.")
             return
 
-        users_collection.update_one({"user_id": user_id}, {"$inc": {"points": -withdraw_amount}})
+        users_collection.update_one({"user_id": user_id}, {"$inc": {"commission": -withdraw_amount}})
         withdraw_collection.insert_one({
             "user_id": user_id,
-            "points": withdraw_amount,
+            "commission": withdraw_amount,
             "date": datetime.utcnow()
         })
 
-        remaining = total_points - withdraw_amount
-        # ✅ User confirmation + support
+        remaining = total_commission - withdraw_amount
         bot.reply_to(
             message,
-            f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\n"
-            f"Remaining points: {remaining}\n\n"
+            f"✅ Withdraw successful! {withdraw_amount} commission withdrawn.\n"
+            f"Remaining commission: {remaining}\n\n"
             f"🛠️ Contact Support: @golgibody dm with your upi id !!"
         )
 
-        # 📩 Owner notification
         bot.send_message(
             OWNER_ID,
             f"📢 Withdraw Request!\n"
             f"👤 User: {username} (ID: {user_id})\n"
-            f"💵 Amount: {withdraw_amount} points\n"
-            f"💰 Remaining Balance: {remaining}"
+            f"💵 Amount: {withdraw_amount}\n"
+            f"💰 Remaining Commission: {remaining}"
         )
 
     except:
         bot.reply_to(message, "❌ Invalid input! Send numeric amount only.")
 
 # ===== Admin Step Handlers =====
-def process_admin_points(message, action):
+def process_admin_add_balance(message):
     try:
-        user_id, points = map(int, message.text.split())
-        if action == "add":
-            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": points}})
-            if result.matched_count:
-                bot.reply_to(message, f"✅ Added {points} points to user {user_id}")
-            else:
-                bot.reply_to(message, "❌ User not found")
-        elif action == "remove":
-            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": -points}})
-            if result.matched_count:
-                bot.reply_to(message, f"✅ Removed {points} points from user {user_id}")
-            else:
-                bot.reply_to(message, "❌ User not found")
+        user_id, amount = map(int, message.text.split())
+        result = users_collection.update_one({"user_id": user_id}, {"$inc": {"balance": amount}})
+        if result.matched_count:
+            bot.reply_to(message, f"✅ Added {amount} balance to user {user_id}")
+        else:
+            bot.reply_to(message, "❌ User not found")
     except:
-        bot.reply_to(message, "❌ Format error! Use <user_id> <points>")
+        bot.reply_to(message, "❌ Format error! Use <user_id> <amount>")
 
-def process_admin_check_points(message):
+def process_admin_check_user(message):
     try:
         user_id = int(message.text)
         user_data = users_collection.find_one({"user_id": user_id})
         if user_data:
-            bot.reply_to(message, f"💰 User {user_id} has {user_data.get('points', 0)} points")
+            bot.reply_to(message, f"💰 User {user_id}\nCommission: {user_data.get('commission', 0)}\nBalance: {user_data.get('balance', 0)}")
         else:
             bot.reply_to(message, "❌ User not found")
     except:
         bot.reply_to(message, "❌ Format error! Send <user_id>")
 
-# ===== NEW COMMAND: /points (Owner only) =====
-@bot.message_handler(commands=['points'])
-def show_all_points(message):
-    if message.from_user.id != OWNER_ID:
-        bot.reply_to(message, "❌ You are not authorized to use this command.")
-        return
-
-    users = list(users_collection.find())
-    if not users:
-        bot.reply_to(message, "❌ No users found in database.")
-        return
-
-    text = "📊 Users Points:\n\n"
-    for i, user in enumerate(users, start=1):
-        username = user.get('username')
-        if username:
-            username = f"@{username}"
-        else:
-            username = user.get("name", "User")
-        points = user.get("points", 0)
-        text += f"{i}. {username} — {points} points\n"
-
-    bot.reply_to(message, text)
-
 # ==================== POLLING ====================
-bot.polling()
+bot.polling(none_stop=True, timeout=60)
