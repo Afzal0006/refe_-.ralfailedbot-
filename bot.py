@@ -7,7 +7,7 @@ BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://TRUSTLYTRANSACTIONBOT:TRUSTLYTRANSACTIONBOT@cluster0.t60mxb7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 BOT_USERNAME = "Eeuei8w9w9wbbot"
 
-OWNER_ID = 7596004396  # <-- Apna Telegram ID yaha daal do
+OWNER_ID = 6998916494  # <-- Apna Telegram ID yaha daal do
 
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
@@ -228,7 +228,35 @@ def handle_callbacks(call):
         )
 
     elif call.data == "cummins":
-        bot.answer_callback_query(call.id, "⚡ Cummins button clicked!")
+        referrals = list(users_collection.find({"referrer_id": user_id}))
+        count = len(referrals)
+
+        usernames = []
+        for r in referrals:
+            if r.get("username"):
+                usernames.append("@" + r["username"])
+            else:
+                usernames.append(r.get("name", "User"))
+
+        cummins_points = count * 2
+        team_list = "\n".join(usernames) if usernames else "No referrals yet."
+
+        msg = (
+            f"⚡ Cummins Report ⚡\n\n"
+            f"👥 Total Referrals: {count}\n"
+            f"💰 Cummins Points: {cummins_points}\n\n"
+            f"👤 Referral Users:\n{team_list}"
+        )
+
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
+
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption=msg,
+            reply_markup=keyboard
+        )
 
     elif call.data == "withdraw":
         points = user_data.get("points", 0)
@@ -268,6 +296,42 @@ def handle_callbacks(call):
             reply_markup=keyboard
         )
 
+    elif call.data == "admin_panel":
+        if call.from_user.id != OWNER_ID:
+            bot.answer_callback_query(call.id, "❌ You are not authorized.")
+            return
+
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        keyboard.add(
+            types.InlineKeyboardButton(text="➕ Add Points", callback_data="admin_add_points"),
+            types.InlineKeyboardButton(text="➖ Remove Points", callback_data="admin_remove_points"),
+            types.InlineKeyboardButton(text="👁‍🗨 Check User Points", callback_data="admin_check_points"),
+            types.InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="back_to_main")
+        )
+
+        bot.send_message(
+            call.message.chat.id,
+            "⚙️ Admin Panel - Choose an action:",
+            reply_markup=keyboard
+        )
+
+    elif call.data.startswith("admin_"):
+        if call.from_user.id != OWNER_ID:
+            bot.answer_callback_query(call.id, "❌ You are not authorized.")
+            return
+
+        if call.data == "admin_add_points":
+            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to ADD")
+            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "add"))
+
+        elif call.data == "admin_remove_points":
+            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to REMOVE")
+            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "remove"))
+
+        elif call.data == "admin_check_points":
+            msg = bot.send_message(call.message.chat.id, "Send <user_id> to check points")
+            bot.register_next_step_handler(msg, process_admin_check_points)
+
     elif call.data == "back_to_main":
         user_name = call.from_user.first_name or "User"
         bot.edit_message_caption(
@@ -276,6 +340,78 @@ def handle_callbacks(call):
             caption=f"WELCOME, {user_name}\n~You are on Main Menu\n~Use the buttons below to navigate",
             reply_markup=main_menu_keyboard(user_id)
         )
+
+# ===== Withdraw Step Handler =====
+def process_withdraw(message):
+    user_id = message.from_user.id
+    username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.first_name
+    user_data = users_collection.find_one({"user_id": user_id}) or {"points": 0}
+    total_points = user_data.get("points", 0)
+
+    try:
+        withdraw_amount = int(message.text)
+        if withdraw_amount < 10:
+            bot.reply_to(message, "❌ Minimum 10 points required to withdraw.")
+            return
+        if withdraw_amount > total_points:
+            bot.reply_to(message, f"❌ You only have {total_points} points. Enter a valid amount.")
+            return
+
+        users_collection.update_one({"user_id": user_id}, {"$inc": {"points": -withdraw_amount}})
+        withdraw_collection.insert_one({
+            "user_id": user_id,
+            "points": withdraw_amount,
+            "date": datetime.utcnow()
+        })
+
+        remaining = total_points - withdraw_amount
+        bot.reply_to(
+            message,
+            f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\n"
+            f"Remaining points: {remaining}\n\n"
+            f"🛠️ Contact Support: @golgibody dm with your upi id !!"
+        )
+
+        bot.send_message(
+            OWNER_ID,
+            f"📢 Withdraw Request!\n"
+            f"👤 User: {username} (ID: {user_id})\n"
+            f"💵 Amount: {withdraw_amount} points\n"
+            f"💰 Remaining Balance: {remaining}"
+        )
+
+    except:
+        bot.reply_to(message, "❌ Invalid input! Send numeric amount only.")
+
+# ===== Admin Step Handlers =====
+def process_admin_points(message, action):
+    try:
+        user_id, points = map(int, message.text.split())
+        if action == "add":
+            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": points}})
+            if result.matched_count:
+                bot.reply_to(message, f"✅ Added {points} points to user {user_id}")
+            else:
+                bot.reply_to(message, "❌ User not found")
+        elif action == "remove":
+            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": -points}})
+            if result.matched_count:
+                bot.reply_to(message, f"✅ Removed {points} points from user {user_id}")
+            else:
+                bot.reply_to(message, "❌ User not found")
+    except:
+        bot.reply_to(message, "❌ Format error! Use <user_id> <points>")
+
+def process_admin_check_points(message):
+    try:
+        user_id = int(message.text)
+        user_data = users_collection.find_one({"user_id": user_id})
+        if user_data:
+            bot.reply_to(message, f"💰 User {user_id} has {user_data.get('points', 0)} points")
+        else:
+            bot.reply_to(message, "❌ User not found")
+    except:
+        bot.reply_to(message, "❌ Format error! Send <user_id>")
 
 # ==================== POLLING ====================
 bot.polling()
