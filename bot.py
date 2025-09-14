@@ -36,11 +36,12 @@ def get_referral_link(user_id):
 def main_menu_keyboard(user_id):
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard.add(
-        types.InlineKeyboardButton(text="Invite & Earn Balance ⚖️", callback_data="invite"),
-        types.InlineKeyboardButton(text="My Balance 💰", callback_data="my_balance")
+        types.InlineKeyboardButton(text="Invite & Earn Points", callback_data="invite"),
+        types.InlineKeyboardButton(text="My Points 💰", callback_data="my_points")
     )
     keyboard.add(
-        types.InlineKeyboardButton(text="👥 My Team", callback_data="my_team")
+        types.InlineKeyboardButton(text="👥 My Team", callback_data="my_team"),
+        types.InlineKeyboardButton(text="Cummins (Report Only)", callback_data="cummins")
     )
     keyboard.add(
         types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw")
@@ -71,7 +72,7 @@ def start(message):
             "name": user_name,
             "username": username,
             "joined": False,
-            "balance": 0
+            "points": 0
         })
     else:
         users_collection.update_one(
@@ -88,11 +89,10 @@ def start(message):
                 if referrer:
                     users_collection.update_one(
                         {"user_id": referrer_id},
-                        {"$inc": {"balance": 2}}
+                        {"$inc": {"points": 2}}
                     )
-                    new_balance = referrer.get("balance", 0) + 2
+                    new_points = referrer.get("points", 0) + 2
 
-                    # 🔥 Save referrer_id in new user
                     users_collection.update_one(
                         {"user_id": user_id},
                         {"$set": {"referrer_id": referrer_id}}
@@ -100,14 +100,14 @@ def start(message):
 
                     bot.send_message(
                         referrer_id,
-                        f"🎉 You earned 2 balance!\nNow you have {new_balance}."
+                        f"🎉 You earned 2 points!\nNow you have {new_points} points."
                     )
                     bot.send_message(
                         OWNER_ID,
                         f"👤 New Referral!\n"
                         f"User: {user_name} (@{username})\n"
                         f"Referred by: {referrer.get('name')} (@{referrer.get('username')})\n"
-                        f"Referrer new balance: {new_balance}"
+                        f"Referrer new points: {new_points}"
                     )
         except Exception as e:
             print("Referral error:", e)
@@ -175,29 +175,29 @@ def check_join(call):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     user_id = call.from_user.id
-    user_data = users_collection.find_one({"user_id": user_id}) or {"balance": 0}
+    user_data = users_collection.find_one({"user_id": user_id}) or {"points": 0}
 
     if call.data == "invite":
         referral_link = get_referral_link(user_id)
-        balance = user_data.get("balance", 0)
+        points = user_data.get("points", 0)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption=f"📢 Your Referral Link:\n`{referral_link}`\n\n💰 Your Balance: {balance}",
+            caption=f"📢 Your Referral Link:\n`{referral_link}`\n\n💰 Your Points: {points}",
             parse_mode="Markdown",
             reply_markup=keyboard
         )
 
-    elif call.data == "my_balance":
-        balance = user_data.get("balance", 0)
+    elif call.data == "my_points":
+        points = user_data.get("points", 0)
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            caption=f"💰 Your Current Balance: {balance}",
+            caption=f"💰 Your Current Points: {points}",
             reply_markup=keyboard
         )
 
@@ -210,12 +210,12 @@ def handle_callbacks(call):
                 usernames.append("@" + r["username"])
             else:
                 usernames.append(r.get("name", "User"))
-        balance = user_data.get("balance", 0)
+        points = user_data.get("points", 0)
         team_list = "\n".join(usernames) if usernames else "No referrals yet."
         msg = (
             f"👥 Your Team: {count} members\n\n"
             f"{team_list}\n\n"
-            f"💰 Your Balance: {balance}"
+            f"💰 Your Balance: {points} points"
         )
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
@@ -226,13 +226,45 @@ def handle_callbacks(call):
             reply_markup=keyboard
         )
 
+    elif call.data == "cummins":
+        referrals = list(users_collection.find({"referrer_id": user_id}))
+        count = len(referrals)
+
+        usernames = []
+        for r in referrals:
+            if r.get("username"):
+                usernames.append("@" + r["username"])
+            else:
+                usernames.append(r.get("name", "User"))
+
+        cummins_points = count * 2
+        team_list = "\n".join(usernames) if usernames else "No referrals yet."
+
+        msg = (
+            f"⚡ Cummins Report ⚡\n\n"
+            f"👥 Total Referrals: {count}\n"
+            f"💰 Earned from Referrals: {cummins_points} points\n\n"
+            f"👤 Referral Users:\n{team_list}\n\n"
+            f"⚠️ Note: Cummins is just a report. Withdrawals are only from your Points balance."
+        )
+
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
+
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption=msg,
+            reply_markup=keyboard
+        )
+
     elif call.data == "withdraw":
-        balance = user_data.get("balance", 0)
-        if balance < 10:
-            bot.answer_callback_query(call.id, "❌ Minimum 10 balance required for withdrawal.")
+        points = user_data.get("points", 0)
+        if points < 10:
+            bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
             return
         msg = bot.send_message(call.message.chat.id,
-            f"💵 You have {balance}.\nSend the amount you want to withdraw (min 10):")
+            f"💵 You have {points} points.\nSend the amount you want to withdraw (min 10 points):")
         bot.register_next_step_handler(msg, process_withdraw)
 
     elif call.data == "support":
@@ -249,10 +281,10 @@ def handle_callbacks(call):
         instructions = (
             "📌 How to Use Bot:\n\n"
             "1. Join all required channels.\n"
-            "2. Click 'Invite & Earn Balance' to get your referral link.\n"
-            "3. Earn 2 balance per referral.\n"
-            "4. Click 'My Balance' to see your balance.\n"
-            "5. Click 'Withdraw' to redeem balance (min 10).\n"
+            "2. Click 'Invite & Earn Points' to get your referral link.\n"
+            "3. Earn 2 points per referral.\n"
+            "4. Click 'My Points' to see your points.\n"
+            "5. Click 'Withdraw' to redeem points (min 10 points).\n"
             "6. For support, click 'Support' button."
         )
         keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -271,9 +303,9 @@ def handle_callbacks(call):
 
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(
-            types.InlineKeyboardButton(text="➕ Add Balance", callback_data="admin_add_balance"),
-            types.InlineKeyboardButton(text="➖ Remove Balance", callback_data="admin_remove_balance"),
-            types.InlineKeyboardButton(text="👁‍🗨 Check User Balance", callback_data="admin_check_balance"),
+            types.InlineKeyboardButton(text="➕ Add Points", callback_data="admin_add_points"),
+            types.InlineKeyboardButton(text="➖ Remove Points", callback_data="admin_remove_points"),
+            types.InlineKeyboardButton(text="👁‍🗨 Check User Points", callback_data="admin_check_points"),
             types.InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="back_to_main")
         )
 
@@ -289,17 +321,17 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id, "❌ You are not authorized.")
             return
 
-        if call.data == "admin_add_balance":
-            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <amount> to ADD")
-            bot.register_next_step_handler(msg, lambda m: process_admin_balance(m, "add"))
+        if call.data == "admin_add_points":
+            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to ADD")
+            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "add"))
 
-        elif call.data == "admin_remove_balance":
-            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <amount> to REMOVE")
-            bot.register_next_step_handler(msg, lambda m: process_admin_balance(m, "remove"))
+        elif call.data == "admin_remove_points":
+            msg = bot.send_message(call.message.chat.id, "Send in this format:\n<user_id> <points> to REMOVE")
+            bot.register_next_step_handler(msg, lambda m: process_admin_points(m, "remove"))
 
-        elif call.data == "admin_check_balance":
-            msg = bot.send_message(call.message.chat.id, "Send <user_id> to check balance")
-            bot.register_next_step_handler(msg, process_admin_check_balance)
+        elif call.data == "admin_check_points":
+            msg = bot.send_message(call.message.chat.id, "Send <user_id> to check points")
+            bot.register_next_step_handler(msg, process_admin_check_points)
 
     elif call.data == "back_to_main":
         user_name = call.from_user.first_name or "User"
@@ -314,30 +346,30 @@ def handle_callbacks(call):
 def process_withdraw(message):
     user_id = message.from_user.id
     username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.first_name
-    user_data = users_collection.find_one({"user_id": user_id}) or {"balance": 0}
-    total_balance = user_data.get("balance", 0)
+    user_data = users_collection.find_one({"user_id": user_id}) or {"points": 0}
+    total_points = user_data.get("points", 0)
 
     try:
         withdraw_amount = int(message.text)
         if withdraw_amount < 10:
-            bot.reply_to(message, "❌ Minimum 10 balance required to withdraw.")
+            bot.reply_to(message, "❌ Minimum 10 points required to withdraw.")
             return
-        if withdraw_amount > total_balance:
-            bot.reply_to(message, f"❌ You only have {total_balance}. Enter a valid amount.")
+        if withdraw_amount > total_points:
+            bot.reply_to(message, f"❌ You only have {total_points} points. Enter a valid amount.")
             return
 
-        users_collection.update_one({"user_id": user_id}, {"$inc": {"balance": -withdraw_amount}})
+        users_collection.update_one({"user_id": user_id}, {"$inc": {"points": -withdraw_amount}})
         withdraw_collection.insert_one({
             "user_id": user_id,
-            "balance": withdraw_amount,
+            "points": withdraw_amount,
             "date": datetime.utcnow()
         })
 
-        remaining = total_balance - withdraw_amount
+        remaining = total_points - withdraw_amount
         bot.reply_to(
             message,
-            f"✅ Withdraw successful! {withdraw_amount} withdrawn.\n"
-            f"Remaining Balance: {remaining}\n\n"
+            f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\n"
+            f"Remaining points: {remaining}\n\n"
             f"🛠️ Contact Support: @golgibody dm with your upi id !!"
         )
 
@@ -345,7 +377,7 @@ def process_withdraw(message):
             OWNER_ID,
             f"📢 Withdraw Request!\n"
             f"👤 User: {username} (ID: {user_id})\n"
-            f"💵 Amount: {withdraw_amount}\n"
+            f"💵 Amount: {withdraw_amount} points\n"
             f"💰 Remaining Balance: {remaining}"
         )
 
@@ -353,30 +385,30 @@ def process_withdraw(message):
         bot.reply_to(message, "❌ Invalid input! Send numeric amount only.")
 
 # ===== Admin Step Handlers =====
-def process_admin_balance(message, action):
+def process_admin_points(message, action):
     try:
-        user_id, amount = map(int, message.text.split())
+        user_id, points = map(int, message.text.split())
         if action == "add":
-            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"balance": amount}})
+            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": points}})
             if result.matched_count:
-                bot.reply_to(message, f"✅ Added {amount} balance to user {user_id}")
+                bot.reply_to(message, f"✅ Added {points} points to user {user_id}")
             else:
                 bot.reply_to(message, "❌ User not found")
         elif action == "remove":
-            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"balance": -amount}})
+            result = users_collection.update_one({"user_id": user_id}, {"$inc": {"points": -points}})
             if result.matched_count:
-                bot.reply_to(message, f"✅ Removed {amount} balance from user {user_id}")
+                bot.reply_to(message, f"✅ Removed {points} points from user {user_id}")
             else:
                 bot.reply_to(message, "❌ User not found")
     except:
-        bot.reply_to(message, "❌ Format error! Use <user_id> <amount>")
+        bot.reply_to(message, "❌ Format error! Use <user_id> <points>")
 
-def process_admin_check_balance(message):
+def process_admin_check_points(message):
     try:
         user_id = int(message.text)
         user_data = users_collection.find_one({"user_id": user_id})
         if user_data:
-            bot.reply_to(message, f"💰 User {user_id} has {user_data.get('balance', 0)} balance")
+            bot.reply_to(message, f"💰 User {user_id} has {user_data.get('points', 0)} points")
         else:
             bot.reply_to(message, "❌ User not found")
     except:
