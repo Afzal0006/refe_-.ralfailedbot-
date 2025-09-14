@@ -41,7 +41,7 @@ def main_menu_keyboard(user_id):
     )
     keyboard.add(
         types.InlineKeyboardButton(text="👥 My Team", callback_data="my_team"),
-        types.InlineKeyboardButton(text="Referal & Commission", callback_data="Commission")
+        types.InlineKeyboardButton(text="Commission (Report Only)", callback_data="commission")
     )
     keyboard.add(
         types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw")
@@ -52,7 +52,8 @@ def main_menu_keyboard(user_id):
     keyboard.add(
         types.InlineKeyboardButton(text="How To Use ❓", callback_data="how_to_use")
     )
-    if OWcommissiond.add(types.InlineKeyboardButton(text="⚙️ Admin Panel", callback_data="admin_panel"))
+    if OWNER_ID:
+        keyboard.add(types.InlineKeyboardButton(text="⚙️ Admin Panel", callback_data="admin_panel"))
     return keyboard
 
 # ===== Start Command =====
@@ -225,7 +226,7 @@ def handle_callbacks(call):
             reply_markup=keyboard
         )
 
-    elif call.data == "Commission":
+    elif call.data == "commission":
         referrals = list(users_collection.find({"referrer_id": user_id}))
         count = len(referrals)
 
@@ -236,13 +237,13 @@ def handle_callbacks(call):
             else:
                 usernames.append(r.get("name", "User"))
 
-        Commission_points = count * 2
+        commission_points = count * 2
         team_list = "\n".join(usernames) if usernames else "No referrals yet."
 
         msg = (
             f"⚡ Commission Report ⚡\n\n"
             f"👥 Total Referrals: {count}\n"
-            f"💰 Earned from Referrals: {Commission_points} points\n\n"
+            f"💰 Earned from Referrals: {commission_points} points\n\n"
             f"👤 Referral Users:\n{team_list}\n\n"
             f"⚠️ Note: Commission is just a report. Withdrawals are only from your Points balance."
         )
