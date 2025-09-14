@@ -7,7 +7,7 @@ BOT_TOKEN = "8357734886:AAHQi1zmj9q8B__7J-2dyYUWVTQrMRr65Dc"
 MONGO_URI = "mongodb+srv://TRUSTLYTRANSACTIONBOT:TRUSTLYTRANSACTIONBOT@cluster0.t60mxb7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 BOT_USERNAME = "Eeuei8w9w9wbbot"
 
-OWNER_ID = 6998916494  # <-- Apna Telegram ID yaha daal do
+OWNER_ID = 7596004396  # <-- Apna Telegram ID yaha daal do
 
 CHANNELS_URLS = [
     "https://t.me/guiii8889",
