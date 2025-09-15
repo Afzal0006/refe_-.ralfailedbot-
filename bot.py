@@ -346,7 +346,7 @@ def process_withdraw(message):
             message,
             f"✅ Withdraw successful! {withdraw_amount} points withdrawn.\n"
             f"Remaining points: {remaining}\n\n"
-            f"🛠️ Contact Support: @golgibody dm with your upi id !!"
+            f"🛠️ Contact Support: @Trader_Gaurav_official dm with your upi id !!"
         )
 
         bot.send_message(
