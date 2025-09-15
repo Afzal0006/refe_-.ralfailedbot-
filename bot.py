@@ -320,9 +320,9 @@ def handle_callbacks(call):
             "📌 How to Use Bot:\n\n"
             "1. Join all required channels.\n"
             "2. Click 'Invite & Earn Commission ' to get your referral link..\n"
-            "3. Referral se points abhi 0 hain (sirf tracking ke liye).\n"
+            "3. Earn 1% Commission of Total Commission Of Referal.\n"
             "4. Click 'My team' to see your invited members.\n"
-            "5. Click 'Withdraw' to redeem Balance (min 10 points)..\n"
+            "5. Click 'Withdraw' to redeem Balance (min 1000 points)..\n"
             "6. For support, click 'Support' button."
         )
         keyboard = types.InlineKeyboardMarkup(row_width=1)
