@@ -120,6 +120,42 @@ def start(message):
         {"$set": {"start_msg_id": sent_msg.message_id}}
     )
 
+# ===== All Referrals Command (Owner Only) =====
+@bot.message_handler(commands=['Allrefrals'])
+def all_referrals(message):
+    if message.from_user.id != OWNER_ID:
+        bot.reply_to(message, "❌ You are not authorized to use this command.")
+        return
+
+    users = list(users_collection.find({}))
+    if not users:
+        bot.send_message(OWNER_ID, "❌ No users found in the database.")
+        return
+
+    report_lines = ["📢 All Referrals Report\n"]
+    for user in users:
+        user_id = user["user_id"]
+        name = user.get("name", "Unknown")
+        username = f"@{user['username']}" if user.get("username") else "N/A"
+
+        referrals = list(users_collection.find({"referrer_id": user_id}))
+        referral_count = len(referrals)
+
+        # Main user line
+        report_lines.append(f"👤 {username} ({name}) → {referral_count} referrals")
+
+        # Show referred users list
+        if referral_count > 0:
+            for ref in referrals:
+                ref_name = ref.get("name", "User")
+                ref_username = f"@{ref['username']}" if ref.get("username") else ref_name
+                report_lines.append(f"   • {ref_username}")
+
+        report_lines.append("")  # Blank line for spacing
+
+    report_text = "\n".join(report_lines)
+    bot.send_message(OWNER_ID, report_text)
+
 # ===== Check Join Callback =====
 @bot.callback_query_handler(func=lambda call: call.data == "check_join")
 def check_join(call):
@@ -284,9 +320,9 @@ def handle_callbacks(call):
             "📌 How to Use Bot:\n\n"
             "1. Join all required channels.\n"
             "2. Click 'Invite & Earn Commission ' to get your referral link..\n"
-            "3. Earn 1% Commission of Total Commission Of Referal.\n"
+            "3. Referral se points abhi 0 hain (sirf tracking ke liye).\n"
             "4. Click 'My team' to see your invited members.\n"
-            "5. Click 'Withdraw' to redeem Balance (min 1000 points)..\n"
+            "5. Click 'Withdraw' to redeem Balance (min 10 points)..\n"
             "6. For support, click 'Support' button."
         )
         keyboard = types.InlineKeyboardMarkup(row_width=1)
