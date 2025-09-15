@@ -291,10 +291,10 @@ def handle_callbacks(call):
         instructions = (
             "📌 How to Use Bot:\n\n"
             "1. Join all required channels.\n"
-            "2. Click 'Invite & Earn Points' to get your referral link.\n"
-            "3. Earn 2 points per referral.\n"
-            "4. Click 'My Points' to see your points.\n"
-            "5. Click 'Withdraw' to redeem points (min 10 points).\n"
+            "2. Click 'Invite & Earn Commission ' to get your referral link..\n"
+            "3. Earn 1 %Commission of Total Commission Of Referal.\n"
+            "4. Click 'My team' to see your Commission..\n"
+            "5. Click 'Withdraw' to redeem Balance (min 1000 points)..\n"
             "6. For support, click 'Support' button."
         )
         keyboard = types.InlineKeyboardMarkup(row_width=1)
