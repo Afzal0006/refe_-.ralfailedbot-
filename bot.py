@@ -9,7 +9,6 @@ BOT_USERNAME = "Inquiry_chatbot"
 
 OWNER_ID = 6998916494  # <-- Apna Telegram ID yaha daal do
 
-# ✅ Ab sirf 1 hi channel rakha gaya
 CHANNELS_URLS = [
     "https://t.me/Trade_With_Gaorav"
 ]
@@ -44,14 +43,10 @@ def main_menu_keyboard(user_id):
     )
     keyboard.add(
         types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw"),
-        types.InlineKeyboardButton(text="Deposit Balance ⚖️", callback_data="deposit_balance")  # ✅ NEW BUTTON
+        types.InlineKeyboardButton(text="Deposit Balance ⚖️", callback_data="deposit_balance")
     )
-    keyboard.add(
-        types.InlineKeyboardButton(text="Support 🛠️", callback_data="support")
-    )
-    keyboard.add(
-        types.InlineKeyboardButton(text="How To Use ❓", callback_data="how_to_use")
-    )
+    keyboard.add(types.InlineKeyboardButton(text="Support 🛠️", callback_data="support"))
+    keyboard.add(types.InlineKeyboardButton(text="How To Use ❓", callback_data="how_to_use"))
     if OWNER_ID:
         keyboard.add(types.InlineKeyboardButton(text="⚙️ Admin Panel", callback_data="admin_panel"))
     return keyboard
@@ -80,38 +75,9 @@ def start(message):
             {"$set": {"username": username, "name": user_name}}
         )
 
-    # Referral system
-    if not existing_user and len(args) > 1:
-        try:
-            referrer_id = int(args[1])
-            if referrer_id != user_id:
-                referrer = users_collection.find_one({"user_id": referrer_id})
-                if referrer:
-                    users_collection.update_one(
-                        {"user_id": referrer_id},
-                        {"$inc": {"points": 2}}
-                    )
-                    new_points = referrer.get("points", 0) + 2
+    # ⚡ Referral system removed ⚡
 
-                    users_collection.update_one(
-                        {"user_id": user_id},
-                        {"$set": {"referrer_id": referrer_id}}
-                    )
-
-                    bot.send_message(
-                        referrer_id,
-                        f"🎉 You earned 2 points!\nNow you have {new_points} points."
-                    )
-                    bot.send_message(
-                        OWNER_ID,
-                        f"👤 New Referral!\n"
-                        f"User: {user_name} (@{username})\n"
-                        f"Referred by: {referrer.get('name')} (@{referrer.get('username')})\n"
-                        f"Referrer new points: {new_points}"
-                    )
-        except Exception as e:
-            print("Referral error:", e)
-
+    # ===== Channels join check =====
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     for name, url in zip(BUTTON_NAMES, CHANNELS_URLS):
         keyboard.add(types.InlineKeyboardButton(text=name, url=url))
@@ -267,7 +233,7 @@ def handle_callbacks(call):
             f"💵 You have {points} points.\nSend the amount you want to withdraw (min 10 points):")
         bot.register_next_step_handler(msg, process_withdraw)
 
-    elif call.data == "deposit_balance":   # ✅ NEW HANDLER
+    elif call.data == "deposit_balance":
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
         bot.edit_message_caption(
