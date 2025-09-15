@@ -43,7 +43,8 @@ def main_menu_keyboard(user_id):
         types.InlineKeyboardButton(text="Commission", callback_data="commission")
     )
     keyboard.add(
-        types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw")
+        types.InlineKeyboardButton(text="Withdraw 💵", callback_data="withdraw"),
+        types.InlineKeyboardButton(text="Deposit Balance ⚖️", callback_data="deposit_balance")  # ✅ NEW BUTTON
     )
     keyboard.add(
         types.InlineKeyboardButton(text="Support 🛠️", callback_data="support")
@@ -265,6 +266,16 @@ def handle_callbacks(call):
         msg = bot.send_message(call.message.chat.id,
             f"💵 You have {points} points.\nSend the amount you want to withdraw (min 10 points):")
         bot.register_next_step_handler(msg, process_withdraw)
+
+    elif call.data == "deposit_balance":   # ✅ NEW HANDLER
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        keyboard.add(types.InlineKeyboardButton(text="🔙 Back", callback_data="back_to_main"))
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption="For Deposit Detail Message Here👉👉 @Trader_Gaurav_official",
+            reply_markup=keyboard
+        )
 
     elif call.data == "support":
         keyboard = types.InlineKeyboardMarkup(row_width=1)
