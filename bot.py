@@ -80,14 +80,19 @@ def start(message):
         if referrer_id and referrer_id != user_id:
             new_user["referrer_id"] = referrer_id
 
-            # ⚡ Points add nahi honge (0 hi rahenge)
+            # ✅ Referrer ka data fetch
+            referrer_data = users_collection.find_one({"user_id": referrer_id})
+            referrer_name = referrer_data.get("name", "Unknown") if referrer_data else "Unknown"
+            referrer_username = (
+                f"@{referrer_data.get('username')}" if referrer_data and referrer_data.get("username") else "N/A"
+            )
 
-            # Owner ko notification
+            # ✅ Owner ko notification
             bot.send_message(
                 OWNER_ID,
                 f"📢 New Referral!\n"
                 f"👤 User: {user_name} (@{username})\n"
-                f"➡️ Referred by: {referrer_id}"
+                f"➡️ Referred by: {referrer_name} ({referrer_username})"
             )
 
         users_collection.insert_one(new_user)
