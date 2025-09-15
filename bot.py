@@ -292,7 +292,7 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id, "❌ Minimum 10 points required for withdrawal.")
             return
         msg = bot.send_message(call.message.chat.id,
-            f"💵 You have {points} points.\nSend the amount you want to withdraw (min 10 points):")
+            f"💵 You have {points} points.\nSend the amount you want to withdraw (min 1000 points):")
         bot.register_next_step_handler(msg, process_withdraw)
 
     elif call.data == "deposit_balance":
