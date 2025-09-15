@@ -389,8 +389,8 @@ def process_withdraw(message):
 
     try:
         withdraw_amount = int(message.text)
-        if withdraw_amount < 10:
-            bot.reply_to(message, "❌ Minimum 10 points required to withdraw.")
+        if withdraw_amount < 1000:
+            bot.reply_to(message, "❌ Minimum 1000 points required to withdraw.")
             return
         if withdraw_amount > total_points:
             bot.reply_to(message, f"❌ You only have {total_points} points. Enter a valid amount.")
