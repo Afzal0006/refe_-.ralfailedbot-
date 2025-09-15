@@ -11,7 +11,7 @@ OWNER_ID = 6998916494  # <-- Apna Telegram ID yaha daal do
 
 # ✅ Ab sirf 1 hi channel rakha gaya
 CHANNELS_URLS = [
-    "https://t.me/guiii8889"
+    "https://t.me/Trade_With_Gaorav"
 ]
 
 BUTTON_NAMES = [
