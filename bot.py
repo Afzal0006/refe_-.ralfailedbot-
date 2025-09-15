@@ -35,7 +35,7 @@ def get_referral_link(user_id):
 def main_menu_keyboard(user_id):
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard.add(
-        types.InlineKeyboardButton(text="Invite & Earn Points", callback_data="invite"),
+        types.InlineKeyboardButton(text="Invite & Earn commission", callback_data="invite"),
         types.InlineKeyboardButton(text="My Points 💰", callback_data="my_points")
     )
     keyboard.add(
