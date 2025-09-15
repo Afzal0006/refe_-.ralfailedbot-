@@ -9,14 +9,13 @@ BOT_USERNAME = "Eeuei8w9w9wbbot"
 
 OWNER_ID = 6998916494  # <-- Apna Telegram ID yaha daal do
 
+# ✅ Ab sirf 1 hi channel rakha gaya
 CHANNELS_URLS = [
-    "https://t.me/guiii8889",
-    "https://t.me/SexyEmoji"
+    "https://t.me/guiii8889"
 ]
 
 BUTTON_NAMES = [
-    "Join channel",
-    "🎯 Join Fun Channel"
+    "Join channel"
 ]
 
 START_PIC = "https://i.ibb.co/8DLsQxtn/x.jpg"
