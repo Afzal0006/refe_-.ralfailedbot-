@@ -61,21 +61,41 @@ def start(message):
 
     existing_user = users_collection.find_one({"user_id": user_id})
 
+    # ✅ Referral ID extract
+    referrer_id = None
+    if len(args) > 1:
+        try:
+            referrer_id = int(args[1])
+        except:
+            referrer_id = None
+
     if not existing_user:
-        users_collection.insert_one({
+        new_user = {
             "user_id": user_id,
             "name": user_name,
             "username": username,
             "joined": False,
             "points": 0
-        })
+        }
+        if referrer_id and referrer_id != user_id:
+            new_user["referrer_id"] = referrer_id
+
+            # ⚡ Points add nahi honge (0 hi rahenge)
+
+            # Owner ko notification
+            bot.send_message(
+                OWNER_ID,
+                f"📢 New Referral!\n"
+                f"👤 User: {user_name} (@{username})\n"
+                f"➡️ Referred by: {referrer_id}"
+            )
+
+        users_collection.insert_one(new_user)
     else:
         users_collection.update_one(
             {"user_id": user_id},
             {"$set": {"username": username, "name": user_name}}
         )
-
-    # ⚡ Referral system removed ⚡
 
     # ===== Channels join check =====
     keyboard = types.InlineKeyboardMarkup(row_width=2)
@@ -203,7 +223,8 @@ def handle_callbacks(call):
             else:
                 usernames.append(r.get("name", "User"))
 
-        commission_points = count * 2
+        # ✅ Commission points fix 0 rakha
+        commission_points = 0
         team_list = "\n".join(usernames) if usernames else "No referrals yet."
 
         msg = (
@@ -258,9 +279,9 @@ def handle_callbacks(call):
             "📌 How to Use Bot:\n\n"
             "1. Join all required channels.\n"
             "2. Click 'Invite & Earn Commission ' to get your referral link..\n"
-            "3. Earn 1 %Commission of Total Commission Of Referal.\n"
-            "4. Click 'My team' to see your Commission..\n"
-            "5. Click 'Withdraw' to redeem Balance (min 1000 points)..\n"
+            "3. Referral se points abhi 0 hain (sirf tracking ke liye).\n"
+            "4. Click 'My team' to see your invited members.\n"
+            "5. Click 'Withdraw' to redeem Balance (min 10 points)..\n"
             "6. For support, click 'Support' button."
         )
         keyboard = types.InlineKeyboardMarkup(row_width=1)
